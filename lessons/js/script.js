@@ -29,6 +29,7 @@ class Todo {
     li.insertAdjacentHTML('beforeend', `
       <span class="text-todo">${todo.value}</span>
       <div class="todo-buttons">
+        <button class="todo-edit"></button>
         <button class="todo-remove"></button>
         <button class="todo-complete"></button>
       </div>
@@ -44,7 +45,7 @@ class Todo {
     console.log(this);
     e.preventDefault();
     if (this.input.value.trim()) {
-      const newTodo = { 
+      const newTodo = {
         value: this.input.value,
         completed: false,
         key: this.generateKey(),
@@ -56,51 +57,123 @@ class Todo {
     }
   }
 
+  animateDeleteItem(target) {
+    const draw = timePassed => {
+      target.style.opacity = 100 / timePassed;
+      target.style.backgroundColor = 'tomato';
+    };
+
+    const start =  Date.now();
+    const timer = setInterval(() => {
+      const timePassed = Date.now() - start;
+
+      if (timePassed > 1000) {
+        clearInterval(timer);
+        return;
+      }
+
+      draw(timePassed);
+    }, 20);
+  }
+
+  animateShiftItem(target, direction) {
+    const draw = timePassed => {
+      if (direction === 'down') {
+        target.style.position = 'relative';
+        target.style.top = timePassed / 25 + 'px';
+        target.style.backgroundColor = 'blue';
+      } else if (direction === 'up') {
+        target.style.position = 'relative';
+        target.style.bottom = timePassed / 25 + 'px';
+        target.style.backgroundColor = 'green';
+      }
+    };
+
+    const start =  Date.now();
+    const timer = setInterval(() => {
+      const timePassed = Date.now() - start;
+
+      if (timePassed > 1000) {
+        clearInterval(timer);
+        return;
+      }
+
+      draw(timePassed);
+    }, 20);
+  }
+
   generateKey() {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
 
+  editItem(target) {
+    const li = target.closest('li').key;
+    this.todoData.forEach((elem, i) => {
+      if (elem.key === li) {
+        target.closest('li').setAttribute('contenteditable', true);
+        target.closest('li').style.backgroundColor = 'steelblue';
+        target.closest('li').addEventListener('blur', () => {
+          target.closest('li').setAttribute('contenteditable', false);
+          target.closest('li').style.backgroundColor = 'white';
+          elem.value = target.closest('li').textContent;
+          this.render();
+        }, { once: true });
+      }
+    });
+  }
+
   deleteItem(target) {
-  let li = target.closest('li').key;
+    const li = target.closest('li').key;
     this.todoData.forEach((elem, i) => {
       if (elem.key === li) {
         this.todoData.delete(i);
       }
     });
-    this.render();
+    this.animateDeleteItem(target.closest('li'));
+    setTimeout(() => {
+      this.render();
+    }, 1000);
   }
 
   completedItem(target) {
-    let li = target.closest('li').key;
+    const li = target.closest('li').key;
     this.todoData.forEach((elem, i) => {
       if (elem.key === li) {
         if (elem.completed) {
           elem.completed = false;
+          this.animateShiftItem(target.closest('li'), 'up');
         } else {
           elem.completed = true;
+          this.animateShiftItem(target.closest('li'), 'down');
         }
       }
     });
-    this.render();
+    setTimeout(() => {
+      this.render();
+    }, 1000);
   }
 
   handler() {
-    this.todoList.addEventListener('click', (event) => {
-      let target = event.target;
+    this.todoList.addEventListener('click', event => {
+      const target = event.target;
       if (target.closest('.todo-remove')) {
         this.deleteItem(target);
       } else if (target.closest('.todo-complete')) {
         this.completedItem(target);
+      } else if (target.closest('.todo-edit')) {
+        this.editItem(target);
       }
     });
 
-    this.todoCompleted.addEventListener('click', (event) => {
-      let target = event.target;
+    this.todoCompleted.addEventListener('click', event => {
+      const target = event.target;
 
       if (target.closest('.todo-remove')) {
         this.deleteItem(target);
       } else if (target.closest('.todo-complete')) {
         this.completedItem(target);
+      } else if (target.closest('.todo-edit')) {
+        this.editItem(target);
       }
     });
   }
